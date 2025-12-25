@@ -3,6 +3,7 @@ import math
 import time
 from OpenGL.GL import *
 from OpenGL.GLUT import *
+from OpenGL.GLU import *
 import config
 
 class BaseFish:
@@ -10,7 +11,8 @@ class BaseFish:
         self.x = x
         self.y = y
         self.z = z
-        self.size = random.uniform(0.5, 1.5)
+        # Larger size (1.5x - 3.0x)
+        self.size = random.uniform(1.5, 3.0)
         self.speed = random.uniform(0.05, 0.2)
         self.angle = random.uniform(0, 360)
         self.anim_offset = random.uniform(0, 100)
@@ -68,15 +70,21 @@ class Fish(BaseFish):
             z1 = math.sin(lat1) * radius
             zr1 = math.cos(lat1) * radius
             
-            glBegin(GL_QUAD_STRIP)
-            for j in range(slices + 1):
-                lng = 2 * math.pi * float(j) / slices
-                x = math.cos(lng)
-                y = math.sin(lng)
-                glNormal3f(x * zr0, y * zr0, z0)
-                glVertex3f(x * zr0, y * zr0, z0)
-                glNormal3f(x * zr1, y * zr1, z1)
-                glVertex3f(x * zr1, y * zr1, z1)
+            glBegin(GL_QUADS)
+            for j in range(slices):
+                lng0 = 2 * math.pi * float(j) / slices
+                x0 = math.cos(lng0)
+                y0 = math.sin(lng0)
+                
+                lng1 = 2 * math.pi * float(j + 1) / slices
+                x1 = math.cos(lng1)
+                y1 = math.sin(lng1)
+
+                # Draw quad (no normals as per strict list)
+                glVertex3f(x0 * zr0, y0 * zr0, z0)
+                glVertex3f(x0 * zr1, y0 * zr1, z1)
+                glVertex3f(x1 * zr1, y1 * zr1, z1)
+                glVertex3f(x1 * zr0, y1 * zr0, z0)
             glEnd()
 
     def draw(self):
@@ -189,23 +197,72 @@ class Octopus(BaseFish):
         glutSolidSphere(0.6, 10, 10)
         glPopMatrix()
         
-        # Legs
+        # Legs (Bigger and longer)
         t = time.time() * 5 + self.anim_offset
         glColor3f(*self.color2)
         for i in range(8):
             angle = i * (360 / 8)
-            rad = math.radians(angle)
-            leg_wiggle = math.sin(t + i) * 20
             
             glPushMatrix()
             glRotatef(angle, 0, 1, 0)
-            glTranslatef(0.3, -0.2, 0)
-            glRotatef(45 + leg_wiggle, 0, 0, 1) # Curve down
+            glTranslatef(0.4, -0.2, 0) # Start further out
             
+            # Wiggle
+            wiggle = math.sin(t + i) * 30
+            glRotatef(wiggle, 0, 1, 0)
+            # Make legs hang down vertically (Align X axis to point down)
+            glRotatef(-80, 0, 0, 1) 
+            
+            # Draw Leg (Longer)
             glBegin(GL_QUADS)
-            # Simple leg segment
-            glVertex3f(0, 0, -0.1); glVertex3f(1.0, 0, -0.05)
-            glVertex3f(1.0, 0, 0.05); glVertex3f(0, 0, 0.1)
+            # Segment 1
+            glVertex3f(0, 0, -0.15); glVertex3f(1.5, -0.1, -0.1)
+            glVertex3f(1.5, -0.1, 0.1); glVertex3f(0, 0, 0.15)
+            # Segment 2 (Tip)
+            glVertex3f(1.5, -0.1, -0.1); glVertex3f(2.5, 0.2, -0.05)
+            glVertex3f(2.5, 0.2, 0.05); glVertex3f(1.5, -0.1, 0.1)
+            glEnd()
+            
+            glPopMatrix()
+            
+        glPopMatrix()
+
+class SchoolOfFish(BaseFish):
+    """A group of small fishes moving together"""
+    def __init__(self, x, y, z):
+        super().__init__(x, y, z)
+        self.offsets = []
+        for _ in range(10): # 10 fish in the school
+            ox = random.uniform(-3, 3)
+            oy = random.uniform(-1, 1)
+            oz = random.uniform(-3, 3)
+            self.offsets.append((ox, oy, oz))
+            
+    def draw(self):
+        glPushMatrix()
+        glTranslatef(self.x, self.y, self.z)
+        glRotatef(-self.angle, 0, 1, 0)
+        
+        # Draw the school
+        glColor3f(*self.color1)
+        for ox, oy, oz in self.offsets:
+            glPushMatrix()
+            glTranslatef(ox, oy, oz)
+            # Wiggle individual fish
+            t = time.time() * 10 + ox
+            glRotatef(math.sin(t)*10, 0, 1, 0)
+            
+            # Simple small fish shape
+            glScalef(0.5, 0.5, 0.5)
+            glBegin(GL_TRIANGLES)
+            # Body
+            glVertex3f(0.5, 0, 0)
+            glVertex3f(-0.5, 0.3, 0)
+            glVertex3f(-0.5, -0.3, 0)
+            # Tail
+            glVertex3f(-0.5, 0, 0)
+            glVertex3f(-0.8, 0.3, 0)
+            glVertex3f(-0.8, -0.3, 0)
             glEnd()
             glPopMatrix()
             
@@ -216,6 +273,7 @@ class Crab(BaseFish):
         super().__init__(x, y, z)
         self.y_offset = 0.5 # Height above ground
         self.speed = 0.05 # Slower
+        self.quad = gluNewQuadric()
 
     def update(self, floor=None):
         super().update(floor)
@@ -248,13 +306,47 @@ class Crab(BaseFish):
                 glTranslatef(0.2 * i - 0.2, 0, 0.4 * side)
                 glRotatef(30 * side, 1, 0, 0) # Angle out
                 
-                # Draw leg segments
-                glBegin(GL_LINES)
-                glVertex3f(0, 0, 0)
-                glVertex3f(0, leg_lift, 0.5 * side)
-                glVertex3f(0, leg_lift, 0.5 * side)
-                glVertex3f(0, -0.5, 0.8 * side)
-                glEnd()
+                # Draw thick leg segments using cylinders
+                
+                # Segment 1: (0,0,0) to (0, leg_lift, 0.5*side)
+                dy1 = leg_lift
+                dz1 = 0.5 * side
+                dist1 = math.sqrt(dy1**2 + dz1**2)
+                angle1 = math.degrees(math.atan2(dy1, dz1)) # Angle from Z axis
+                # glutSolidCylinder draws along +Z.
+                # atan2(y, x) -> atan2(dy, dz).
+                # We need to rotate around X axis.
+                # Positive rotation around X moves Y towards Z.
+                # Actually, standard rotation: glRotatef(-angle, 1, 0, 0) might be needed depending on coord sys.
+                # Let's try:
+                
+                glPushMatrix()
+                # Rotate so Z aligns with vector
+                # Vector is (0, dy1, dz1)
+                # We want (0, 0, dist1)
+                glRotatef(-angle1, 1, 0, 0) # Rotate X to bring Z up to vector? 
+                # If angle is 90 (up), we want to rotate -90?
+                # atan2(1, 0) = 90. cylinder is (0,0,1).
+                # We want (0,1,0). glRotatef(-90, 1,0,0) -> y becomes z? No.
+                # y' = y cos - z sin
+                # z' = y sin + z cos
+                # (0,0,1) -> (0, -sin(-90), cos(-90)) = (0, 1, 0). Yes. -90 works.
+                
+                gluCylinder(self.quad, 0.04, 0.04, dist1, 6, 1)
+                glPopMatrix()
+                
+                # Segment 2: from (0, leg_lift, 0.5*side) to (0, -0.5, 0.8*side)
+                dy2 = -0.5 - leg_lift
+                dz2 = (0.8 * side) - (0.5 * side)
+                dist2 = math.sqrt(dy2**2 + dz2**2)
+                angle2 = math.degrees(math.atan2(dy2, dz2))
+                
+                glPushMatrix()
+                glTranslatef(0, leg_lift, 0.5 * side)
+                glRotatef(-angle2, 1, 0, 0)
+                gluCylinder(self.quad, 0.03, 0.03, dist2, 6, 1)
+                glPopMatrix()
+                
                 glPopMatrix()
         glPopMatrix()
 
@@ -327,15 +419,19 @@ class FishManager:
                     
                     # Pick a random type (No Eels)
                     r = random.random()
-                    if r < 0.6:
+                    if r < 0.5:
                         y = random.uniform(5, 30)
                         self.fishes.append(Fish(x, y, z))
-                    elif r < 0.8:
+                    elif r < 0.7:
                         y = random.uniform(5, 30)
                         self.fishes.append(TriangularFish(x, y, z))
-                    elif r < 0.9:
+                    elif r < 0.8:
                         y = random.uniform(5, 30)
                         self.fishes.append(Octopus(x, y, z))
+                    elif r < 0.9:
+                        # School of fish
+                        y = random.uniform(5, 30)
+                        self.fishes.append(SchoolOfFish(x, y, z))
                     else:
                         # Crab
                         self.fishes.append(Crab(x, 0, z))

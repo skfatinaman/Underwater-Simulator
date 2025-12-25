@@ -1,4 +1,6 @@
 import sys
+import math
+import time
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
@@ -6,16 +8,25 @@ import config
 from camera import Camera
 from seabed import Seabed
 from fishes import FishManager
+from particles import ParticleManager
 
 cam = Camera()
 floor = Seabed()
-fishes = FishManager(count=30)
+fishes = FishManager(count=config.FISH_COUNT)
+particles = ParticleManager(count=600)
 
 def init():
     c = config.WATER_VOID_COLOR
     glClearColor(c[0], c[1], c[2], 1.0)
-    glEnable(GL_DEPTH_TEST)
-    glEnable(GL_COLOR_MATERIAL)
+    
+    # Setup Projection (replacing reshape)
+    w, h = 1280, 720
+    glViewport(0, 0, w, h)
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    # Reduced far plane for performance (400 -> 150)
+    gluPerspective(45.0, w/h, 0.1, 150.0)
+    glMatrixMode(GL_MODELVIEW)
 
 def draw_text(x, y, text):
     """Utility to render simple text on screen."""
@@ -34,10 +45,8 @@ def draw_menu():
     glPushMatrix()
     glLoadIdentity()
 
-    glDisable(GL_DEPTH_TEST)
-
     # Darken background
-    glColor4f(0, 0, 0, 0.5)
+    glColor3f(0, 0, 0)
     glBegin(GL_QUADS)
     glVertex2f(440, 200); glVertex2f(840, 200)
     glVertex2f(840, 520); glVertex2f(440, 520)
@@ -59,10 +68,131 @@ def draw_menu():
     # Show current setting
     glColor3f(0.5, 1, 0.5)
     draw_text(520, 450, f"Current Level: {config.GRAPHICS_LEVEL}")
-
-    glEnable(GL_DEPTH_TEST)
     
     # Restore 3D projection
+    glPopMatrix()
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
+    glMatrixMode(GL_MODELVIEW)
+
+def draw_hud():
+    """Draws a simple HUD with counters."""
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glLoadIdentity()
+    gluOrtho2D(0, 1280, 0, 720)
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity()
+    
+    glColor3f(1, 1, 1)
+    draw_text(20, 700, f"Rocks: {len(floor.rocks)}")
+    draw_text(20, 670, f"Plants: {len(floor.seaweeds)}")
+    
+    glPopMatrix()
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
+    glMatrixMode(GL_MODELVIEW)
+
+def draw_sonar():
+    """Draws a circular sonar map in the top right."""
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glLoadIdentity()
+    gluOrtho2D(0, 1280, 0, 720)
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity()
+    
+    # Sonar Config
+    center_x, center_y = 1150, 600
+    radius = 100
+    scale = 2.0 # Map units to pixels
+    
+    # Background (Greenish transparent)
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    glColor4f(0, 0.2, 0, 0.5)
+    
+    glBegin(GL_TRIANGLE_FAN)
+    glVertex2f(center_x, center_y)
+    for i in range(361):
+        rad = math.radians(i)
+        glVertex2f(center_x + math.cos(rad) * radius, center_y + math.sin(rad) * radius)
+    glEnd()
+    
+    # Rim
+    glLineWidth(2.0)
+    glColor3f(0, 0.8, 0)
+    glBegin(GL_LINE_LOOP)
+    for i in range(361):
+        rad = math.radians(i)
+        glVertex2f(center_x + math.cos(rad) * radius, center_y + math.sin(rad) * radius)
+    glEnd()
+    glLineWidth(1.0)
+    
+    # Sweep Line (Animated)
+    t = time.time() * 2
+    sweep_x = center_x + math.cos(t) * radius
+    sweep_y = center_y + math.sin(t) * radius
+    glBegin(GL_LINES)
+    glVertex2f(center_x, center_y)
+    glVertex2f(sweep_x, sweep_y)
+    glEnd()
+    
+    # Draw Entities
+    glPointSize(4.0)
+    glBegin(GL_POINTS)
+    
+    # Player (Center) - White
+    glColor3f(1, 1, 1)
+    glVertex2f(center_x, center_y)
+    
+    # Ship (Static at 0,0,0) - Yellow Square-ish
+    # Ship is at (0, 0, 0) in world
+    dx_ship = 0 - cam.pos[0]
+    dz_ship = 0 - cam.pos[2]
+    # Rotate by camera yaw to orient map with view? Or Fixed North?
+    # Usually sonar rotates with player.
+    # If fixed north: just use dx, dz.
+    # If rotating: rotate (dx, dz) by -cam.yaw.
+    
+    # Let's do fixed north for simplicity first (Player moves on map? No, player is center).
+    # So map moves around player.
+    # To orient "Forward" as "Up" on sonar:
+    # We need to rotate world coordinates by -cam.yaw.
+    
+    yaw_rad = math.radians(cam.yaw + 90) # Adjust for camera coordinate system
+    
+    def rotate_point(x, z):
+        # Rotate (x, z) by -yaw
+        c = math.cos(-yaw_rad)
+        s = math.sin(-yaw_rad)
+        rx = x * c - z * s
+        rz = x * s + z * c
+        return rx, rz
+
+    # Ship
+    sx, sz = rotate_point(dx_ship, dz_ship)
+    dist_ship = math.sqrt(sx*sx + sz*sz) * scale
+    if dist_ship < radius:
+        glColor3f(1, 1, 0) # Yellow
+        glVertex2f(center_x + sx * scale, center_y - sz * scale) # Flip Z for screen Y
+        
+    # Fishes - Red
+    glColor3f(1, 0, 0)
+    for fish in fishes.fishes:
+        dx = fish.x - cam.pos[0]
+        dz = fish.z - cam.pos[2]
+        fx, fz = rotate_point(dx, dz)
+        
+        if (fx*fx + fz*fz) * scale*scale < radius*radius:
+             glVertex2f(center_x + fx * scale, center_y - fz * scale)
+             
+    glEnd()
+    glPointSize(1.0)
+    glDisable(GL_BLEND)
+
     glPopMatrix()
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
@@ -77,10 +207,18 @@ def display():
     cam.apply_view()
     floor.draw(cam.pos)
     
-    # Update and draw fishes
+    # Update and draw entities
     if config.STATE == "GAME":
         fishes.update(floor, cam.pos)
+        particles.update(cam.pos)
+        
     fishes.draw()
+    particles.draw()
+    
+    # Draw HUD
+    if config.STATE == "GAME":
+        draw_hud()
+        draw_sonar()
     
     # If paused, draw the menu on top
     if config.STATE == "MENU":
@@ -142,7 +280,7 @@ def main():
     glutCreateWindow(b"Scuba Simulator - Pause Menu")
     init()
     glutDisplayFunc(display)
-    glutReshapeFunc(reshape)
+    # glutReshapeFunc(reshape) # Removed as not in usableFunctions.txt
     glutKeyboardFunc(keyboard)
     glutSpecialFunc(special_input)
     glutIdleFunc(display)

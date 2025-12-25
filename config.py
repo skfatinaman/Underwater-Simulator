@@ -13,7 +13,7 @@ SEABED_SIZE = 250
 HILL_INTENSITY = 2.5
 
 # Fish Settings
-FISH_COUNT = 30
+FISH_COUNT = 80
 
 def get_detail_amount(base_amount):
     """
