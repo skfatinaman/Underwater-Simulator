@@ -1,0 +1,178 @@
+"""
+OpenGL and GLUT Functions Reference
+====================================
+This file documents all GL, GLU, and GLUT functions used in the example programs.
+"""
+
+# ========== OpenGL (GL) Functions ==========
+
+# ----- Drawing Functions -----
+# glBegin(mode) - Start defining vertices for a primitive
+#   Modes: GL_POINTS, GL_LINES, GL_TRIANGLES, GL_QUADS, etc.
+# glEnd() - End defining vertices
+# glVertex2f(x, y) - Specify a 2D vertex with float coordinates
+# glVertex2d(x, y) - Specify a 2D vertex with double coordinates
+# glVertex3f(x, y, z) - Specify a 3D vertex with float coordinates
+
+# ----- Color Functions -----
+# glColor3f(r, g, b) - Set current drawing color (RGB values 0.0-1.0)
+
+# ----- Point and Line Attributes -----
+# glPointSize(size) - Set the size of points in pixels
+# glLineWidth(width) - Set the width of lines in pixels
+
+# ----- Matrix Operations -----
+# glMatrixMode(mode) - Specify which matrix stack to operate on
+#   Modes: GL_PROJECTION, GL_MODELVIEW
+# glLoadIdentity() - Reset the current matrix to identity
+# glPushMatrix() - Save the current matrix state to the stack
+# glPopMatrix() - Restore the previous matrix state from the stack
+
+# ----- Transformation Functions -----
+# glTranslatef(x, y, z) - Translate (move) the coordinate system
+# glRotatef(angle, x, y, z) - Rotate around an axis (angle in degrees)
+# glScalef(x, y, z) - Scale the coordinate system
+
+# ----- Viewport and Clearing -----
+# glViewport(x, y, width, height) - Set the viewport (rendering area)
+# glClear(mask) - Clear buffers
+#   Masks: GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT
+# glOrtho(left, right, bottom, top, near, far) - Set orthographic projection
+
+# ----- Text Rendering -----
+# glRasterPos2f(x, y) - Set the raster position for text/bitmap drawing
+
+
+# ========== GLU (OpenGL Utility) Functions ==========
+
+# ----- Projection Functions -----
+# gluPerspective(fovY, aspect, near, far) - Set up perspective projection
+#   fovY: Field of view angle (vertical)
+#   aspect: Aspect ratio (width/height)
+#   near, far: Near and far clipping planes
+# gluOrtho2D(left, right, bottom, top) - Set up 2D orthographic projection
+# gluLookAt(eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ)
+#   Position camera and set viewing direction
+
+# ----- Quadric Object Functions -----
+# gluNewQuadric() - Create a new quadric object (for shapes)
+# gluCylinder(quadric, base, top, height, slices, stacks) - Draw cylinder
+# gluSphere(quadric, radius, slices, stacks) - Draw sphere
+
+
+# ========== GLUT (OpenGL Utility Toolkit) Functions ==========
+
+# ----- Initialization Functions -----
+# glutInit() - Initialize GLUT library
+# glutInitDisplayMode(mode) - Set display mode
+#   Modes: GLUT_RGBA, GLUT_DOUBLE, GLUT_RGB, GLUT_DEPTH
+# glutInitWindowSize(width, height) - Set window size
+# glutInitWindowPosition(x, y) - Set window position on screen
+# glutCreateWindow(title) - Create window with title (must be bytes)
+
+# ----- Callback Registration -----
+# glutDisplayFunc(func) - Register display callback function
+# glutIdleFunc(func) - Register idle callback (runs continuously)
+# glutKeyboardFunc(func) - Register keyboard callback for normal keys
+# glutSpecialFunc(func) - Register callback for special keys (arrows, F-keys)
+# glutMouseFunc(func) - Register mouse button callback
+
+# ----- Window Management -----
+# glutMainLoop() - Enter the GLUT event processing loop
+# glutSwapBuffers() - Swap front and back buffers (double buffering)
+# glutPostRedisplay() - Mark window for redisplay
+
+# ----- 3D Shape Functions -----
+# glutSolidCube(size) - Draw a solid cube
+# glutWireCube(size) - Draw a wireframe cube
+# glutSolidSphere(radius, slices, stacks) - Draw a solid sphere
+# glutWireSphere(radius, slices, stacks) - Draw a wireframe sphere
+
+# ----- Text Rendering Functions -----
+# glutBitmapCharacter(font, character) - Draw a single character
+#   Fonts: GLUT_BITMAP_HELVETICA_18, GLUT_BITMAP_9_BY_15, etc.
+
+# ----- Special Key Constants -----
+# GLUT_KEY_UP - Up arrow key
+# GLUT_KEY_DOWN - Down arrow key
+# GLUT_KEY_LEFT - Left arrow key
+# GLUT_KEY_RIGHT - Right arrow key
+
+# ----- Mouse Button Constants -----
+# GLUT_LEFT_BUTTON - Left mouse button
+# GLUT_RIGHT_BUTTON - Right mouse button
+# GLUT_DOWN - Button pressed state
+# GLUT_UP - Button released state
+
+
+# ========== Common Usage Patterns ==========
+
+"""
+Basic 2D Setup:
+--------------
+1. glutInit()
+2. glutInitDisplayMode(GLUT_RGBA)
+3. glutInitWindowSize(width, height)
+4. glutCreateWindow(title)
+5. glutDisplayFunc(display_callback)
+6. glutMainLoop()
+
+Basic 3D Setup:
+--------------
+1. glutInit()
+2. glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
+3. glutInitWindowSize(width, height)
+4. glutCreateWindow(title)
+5. Set up camera with gluPerspective() and gluLookAt()
+6. glutDisplayFunc(display_callback)
+7. glutMainLoop()
+
+Drawing Shapes:
+--------------
+glBegin(GL_TRIANGLES)
+    glColor3f(1, 0, 0)  # Red
+    glVertex2f(x1, y1)
+    glVertex2f(x2, y2)
+    glVertex2f(x3, y3)
+glEnd()
+
+Matrix Transformations:
+----------------------
+glPushMatrix()          # Save current state
+glTranslatef(x, y, z)   # Move
+glRotatef(angle, 0, 0, 1)  # Rotate around Z-axis
+glScalef(2, 2, 2)       # Scale 2x
+# Draw object here
+glPopMatrix()           # Restore previous state
+"""
+
+
+# ========== Display Mode Flags ==========
+"""
+GLUT_RGBA - RGBA color mode
+GLUT_RGB - RGB color mode
+GLUT_DOUBLE - Double buffered mode
+GLUT_DEPTH - Enable depth buffer
+GLUT_SINGLE - Single buffered mode
+"""
+
+
+# ========== GL Constants ==========
+"""
+Drawing Modes:
+- GL_POINTS - Individual points
+- GL_LINES - Pairs of vertices as lines
+- GL_LINE_STRIP - Connected line segments
+- GL_LINE_LOOP - Closed loop of lines
+- GL_TRIANGLES - Triplets of vertices as triangles
+- GL_QUADS - Quadruplets of vertices as quadrilaterals
+- GL_POLYGON - Single polygon
+
+Buffer Bits:
+- GL_COLOR_BUFFER_BIT - Color buffer
+- GL_DEPTH_BUFFER_BIT - Depth buffer
+
+Matrix Modes:
+- GL_PROJECTION - Projection matrix stack
+- GL_MODELVIEW - Modelview matrix stack
+"""
