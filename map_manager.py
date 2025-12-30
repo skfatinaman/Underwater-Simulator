@@ -6,6 +6,10 @@ import config
 import math
 import random
 import time
+from orangered_fish import OrangeRedFish
+from blueblack_fish import BlueBlackFish
+from pink_fish import PinkFish
+from yellowgray_fish import YellowGrayFish
 
 class Seaweed:
     def __init__(self, x, z, base_y, color=(0.1, 0.6, 0.2)):
@@ -67,6 +71,10 @@ class MapManager:
         self.seaweeds = []
         self.coral_rects = []
         self.coral_reefs = []
+        self.orangered_fish_school = []
+        self.blueblack_school = []
+        self.pink_fish_school = []
+        self.yellowgray_fish_school = []
         self.generate_world()
 
     def add_block(self, x, y, z, block_id):
@@ -144,6 +152,39 @@ class MapManager:
                 count += 1
                 if count >= patch_min:
                     pass
+        
+        num_orangered_fish = 35
+        for i in range(num_orangered_fish):
+            fish_x = random.randint(10, config.MAP_SIZE - 10)
+            fish_z = random.randint(10, config.MAP_SIZE - 10)
+            fish_y = self.height_map.get((fish_x, fish_z), 1) + random.uniform(3.5, 5.5)
+            self.orangered_fish_school.append(OrangeRedFish(fish_x, fish_z, fish_y))
+        print(f"Spawned {num_orangered_fish} orange red fish across the ocean")
+        
+        num_blueblack_fish = 35
+        for i in range(num_blueblack_fish):
+            fish_x = random.randint(10, config.MAP_SIZE - 10)
+            fish_z = random.randint(10, config.MAP_SIZE - 10)
+            fish_y = self.height_map.get((fish_x, fish_z), 1) + random.uniform(4.0, 6.0)
+            self.blueblack_school.append(BlueBlackFish(fish_x, fish_z, fish_y))
+        print(f"Spawned {num_blueblack_fish} blue black fish across the ocean")
+        
+        num_pink_fish = 35
+        for i in range(num_pink_fish):
+            fish_x = random.randint(10, config.MAP_SIZE - 10)
+            fish_z = random.randint(10, config.MAP_SIZE - 10)
+            fish_y = self.height_map.get((fish_x, fish_z), 1) + random.uniform(4.5, 7.0)
+            self.pink_fish_school.append(PinkFish(fish_x, fish_z, fish_y))
+        print(f"Spawned {num_pink_fish} pink fish across the ocean")
+        
+        num_yellowgray_fish = 35
+        for i in range(num_yellowgray_fish):
+            fish_x = random.randint(10, config.MAP_SIZE - 10)
+            fish_z = random.randint(10, config.MAP_SIZE - 10)
+            fish_y = self.height_map.get((fish_x, fish_z), 1) + random.uniform(3.0, 5.5)
+            self.yellowgray_fish_school.append(YellowGrayFish(fish_x, fish_z, fish_y))
+        print(f"Spawned {num_yellowgray_fish} yellow gray fish across the ocean")
+        
         self._generate_caves()
 
     def is_occupied(self, x, y, z):
@@ -193,6 +234,27 @@ class MapManager:
             if not in_range(int(sw.x), int(sw.z)):
                 continue
             sw.draw(t, cam)
+        
+        for fish in self.orangered_fish_school:
+            fish.update(t)
+            if in_range(int(fish.x), int(fish.z)):
+                fish.draw()
+        
+        for fish in self.blueblack_school:
+            fish.update(t)
+            if in_range(int(fish.x), int(fish.z)):
+                fish.draw()
+        
+        for fish in self.pink_fish_school:
+            fish.update(t)
+            if in_range(int(fish.x), int(fish.z)):
+                fish.draw()
+        
+        for fish in self.yellowgray_fish_school:
+            fish.update(t)
+            if in_range(int(fish.x), int(fish.z)):
+                fish.draw()
+        
         self._update_bubbles(dt)
         self._draw_bubbles()
 
