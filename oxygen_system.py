@@ -92,10 +92,6 @@ class OxygenSystem:
         glPushMatrix()
         glLoadIdentity()
         
-        # Enable blending for transparency effects
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        
         # === Draw shadow for depth ===
         glColor3f(0, 0, 0)
         glBegin(GL_QUADS)
@@ -155,8 +151,6 @@ class OxygenSystem:
             glVertex2f(self.bar_x + filled_width, self.bar_y + self.bar_height)
             glVertex2f(self.bar_x, self.bar_y + self.bar_height)
             glEnd()
-        
-        glDisable(GL_BLEND)
         
         # === Draw border (outline) ===
         glColor3f(0.85, 0.92, 1.0)  # Light cyan/white

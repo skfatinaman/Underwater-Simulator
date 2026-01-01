@@ -12,11 +12,20 @@ from pink_fish import PinkFish
 from yellowgray_fish import YellowGrayFish
 
 class Seaweed:
-    def __init__(self, x, z, base_y, color=(0.1, 0.6, 0.2)):
+    def __init__(self, x, z, base_y, color=None):
         self.x = x + 0.5
         self.z = z + 0.5
-        self.base_y = base_y + 0.5
-        self.color = color
+        self.base_y = base_y  # Start at ground level (no +0.5 offset)
+        # Random green color selection
+        if color is None:
+            green_colors = [
+                (0.1, 0.6, 0.2),    # Green
+                (0.05, 0.4, 0.1),   # Dark green
+                (0.03, 0.3, 0.08)   # Darker green
+            ]
+            self.color = random.choice(green_colors)
+        else:
+            self.color = color
         self.phase = random.uniform(0, 6.28318)
         self.amp = config.SEAWEED_SWAY_AMP
         self.width = 0.15
@@ -31,6 +40,9 @@ class Seaweed:
         glutSolidCube(1.0)
         glPopMatrix()
 
+        # Draw 2D flat leaves (Cluster of leaves)
+        self._draw_leaves(self.x + sway, self.base_y + self.seg_len * 0.5, self.z, 0)
+
         sway_top = math.sin(t + self.phase + 0.8) * (self.amp * 1.3)
         glPushMatrix()
         glTranslatef(self.x + sway_top, self.base_y + self.seg_len * 1.5, self.z)
@@ -39,8 +51,47 @@ class Seaweed:
         glutSolidCube(1.0)
         glPopMatrix()
 
+        # Draw leaves for top segment
+        self._draw_leaves(self.x + sway_top, self.base_y + self.seg_len * 1.5, self.z, 1)
+
         if self._contains(cam.pos, sway, sway_top):
             cam.visible = False
+
+    def _draw_leaves(self, x, y, z, level):
+        # Draw many 2D flat leaves (rectangles) radially around the weed
+        glPushMatrix()
+        glTranslatef(x, y, z)
+        glColor3f(self.color[0]*0.9, self.color[1]*1.1, self.color[2]*0.9) # Slightly different color
+        
+        # Draw multiple layers of leaves to make it dense
+        # 3 layers vertically, more leaves around per layer for better radial distribution
+        num_layers = 3
+        leaves_per_layer = 8  # Increased from 4 to 8 for better radial coverage
+        
+        for l in range(num_layers):
+            layer_y = (l - 1) * 0.2 # Spread vertically around the center
+            
+            for i in range(leaves_per_layer):
+                glPushMatrix()
+                # Rotate around Y axis to distribute leaves radially
+                angle = i * (360.0 / leaves_per_layer) + (l * 15.0) # Offset layers rotation
+                glRotatef(angle, 0, 1, 0)
+                glTranslatef(0, layer_y, 0)
+                
+                # Draw leaf as a long rectangle extending outward radially
+                glBegin(GL_QUADS)
+                # Leaf shape - longer and thinner rectangles
+                leaf_len = 0.35 + (level * 0.1)
+                leaf_w = 0.08
+                
+                # Draw leaf extending outward from the center
+                glVertex3f(0.02, -leaf_w/2, 0)
+                glVertex3f(leaf_len, -leaf_w/2, 0)
+                glVertex3f(leaf_len, leaf_w/2, 0)
+                glVertex3f(0.02, leaf_w/2, 0)
+                glEnd()
+                glPopMatrix()
+        glPopMatrix()
 
     def _contains(self, pos, sway, sway_top):
         px, py, pz = pos
@@ -85,7 +136,7 @@ class MapManager:
         amp = 3
         coral_threshold = 0.55
         rock_threshold = 0.4
-        weed_threshold = 0.5
+        weed_threshold = 0.4  # Lowered from 0.5 to create more seaweed clusters
         for x in range(config.MAP_SIZE):
             for z in range(config.MAP_SIZE):
                 n = self._perlin2d(x * scale, z * scale)
@@ -104,7 +155,18 @@ class MapManager:
                     self.add_block(x, top_y, z, 11)
                 n3 = self._perlin2d(x * scale * 2.1 + 200.0, z * scale * 2.1 + 200.0)
                 if n3 > weed_threshold and top_y + 3 < config.MAX_HEIGHT:
+                    # Create main seaweed
                     self.seaweeds.append(Seaweed(x, z, top_y))
+                    # Add cluster of nearby seaweed for denser patches
+                    if random.random() < 0.6:  # 60% chance of cluster
+                        for _ in range(random.randint(2, 4)):  # Add 2-4 more seaweed nearby
+                            dx = random.randint(-1, 1)
+                            dz = random.randint(-1, 1)
+                            nx, nz = x + dx, z + dz
+                            if 0 <= nx < config.MAP_SIZE and 0 <= nz < config.MAP_SIZE:
+                                cluster_y = self.height_map.get((nx, nz), top_y)
+                                if cluster_y + 3 < config.MAX_HEIGHT:
+                                    self.seaweeds.append(Seaweed(nx, nz, cluster_y))
 
         reef_w = min(config.CORAL_REEF_MAX_SIZE, config.MAP_SIZE)
         reef_d = min(config.CORAL_REEF_MAX_SIZE, config.MAP_SIZE)
