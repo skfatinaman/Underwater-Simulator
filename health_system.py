@@ -80,10 +80,6 @@ class HealthSystem:
         glPushMatrix()
         glLoadIdentity()
         
-        # Enable blending for transparency
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        
         # === Draw shadow ===
         glColor3f(0, 0, 0)
         glBegin(GL_QUADS)
@@ -138,12 +134,10 @@ class HealthSystem:
             glColor4f(1, 1, 1, 0.32)
             glVertex2f(self.bar_x, self.bar_y + self.bar_height * 0.65)
             glVertex2f(self.bar_x + filled_width, self.bar_y + self.bar_height * 0.65)
-            glColor4f(1, 1, 1, 0.06)
+            glColor3f(1, 1, 1)  # Changed from glColor4f for compliance
             glVertex2f(self.bar_x + filled_width, self.bar_y + self.bar_height)
             glVertex2f(self.bar_x, self.bar_y + self.bar_height)
             glEnd()
-        
-        glDisable(GL_BLEND)
         
         # === Draw border ===
         glColor3f(0.85, 0.92, 1.0)
