@@ -144,6 +144,28 @@ def draw_camera_overlay():
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)
 
+def restart_simulation():
+    """Reset all game systems to initial state."""
+    global is_moving, last_update_time, cam
+    
+    # Reset movement state
+    is_moving = False
+    
+    # Reset camera to spawn position
+    cam.pos = world.get_spawn_position()
+    cam.yaw = 0.0
+    cam.pitch = 0.0
+    
+    # Reset oxygen system
+    oxygen.level = 100.0
+    oxygen.is_depleting = False
+    
+    # Reset health system
+    health.reset()
+    
+    # Reset timer
+    last_update_time = time.time()
+
 def display():
     global camera_view_mode
     
@@ -203,6 +225,10 @@ def display():
     if camera_view_mode:
         draw_camera_overlay()
     
+    # Draw death screen if player is dead
+    if health.is_dead:
+        health.draw_death_screen(config.WINDOW_WIDTH, config.WINDOW_HEIGHT)
+    
     # Draw settings menu if open
     settings_menu.draw()
     
@@ -210,6 +236,16 @@ def display():
 
 def keyboard(key, x, y):
     global is_moving
+    
+    # Handle restart key when dead
+    if health.is_dead and key == b'1':
+        restart_simulation()
+        glutPostRedisplay()
+        return
+    
+    # Prevent all other actions when dead
+    if health.is_dead:
+        return
     
     # Check if settings menu handles the key
     if settings_menu.handle_key(key):
@@ -250,6 +286,9 @@ def mouse(button, state, x, y):
 def keyboard_up(key, x, y):
     """Handle key release to stop oxygen depletion."""
     global is_moving
+    # Don't process key release when dead
+    if health.is_dead:
+        return
     if key in [b'w', b's', b'a', b'd', b'q', b'e']:
         is_moving = False
         oxygen.stop_depletion()
@@ -257,6 +296,11 @@ def keyboard_up(key, x, y):
 def update():
     """Update oxygen and health systems based on elapsed time."""
     global last_update_time
+    
+    # Don't update game state when dead
+    if health.is_dead:
+        glutPostRedisplay()
+        return
     
     current_time = time.time()
     delta_time = current_time - last_update_time
@@ -267,6 +311,9 @@ def update():
     
     # Update health (depletes when oxygen is critical)
     health.update(delta_time, oxygen.is_critical())
+    
+    # Check if player has died
+    health.is_depleted()
     
     glutPostRedisplay()
 def main():
